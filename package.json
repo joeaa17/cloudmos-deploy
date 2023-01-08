@@ -90,9 +90,7 @@
     "use-state-with-callback": "^2.0.3",
     "usehooks-ts": "^2.2.1",
     "web-vitals": "^1.1.2",
-    "winston": "^3.3.3"
-  },
-  "devDependencies": {
+    "winston": "^3.3.3",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
@@ -103,5 +101,7 @@
     "electron-squirrel-startup": "^1.0.0",
     "monaco-editor-webpack-plugin": "^4.1.2",
     "react-app-rewired": "^2.1.8"
+  },
+  "devDependencies": {
   }
 }
