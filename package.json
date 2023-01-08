@@ -24,7 +24,8 @@
     "build-mac": "cross-env GENERATE_SOURCEMAP=false react-app-rewired build && electron-builder --mac",
     "build-linux": "cross-env GENERATE_SOURCEMAP=false react-app-rewired build && electron-builder --linux",
     "dist-mac": "cross-env DEBUG=electron-builder electron-builder --mac",
-    "release": "react-app-rewired build && electron-builder --windows --publish always"
+    "release": "react-app-rewired build && electron-builder --windows --publish always",
+    "build": "cross-env GENERATE_SOURCEMAP=false BROWSER=none react-app-rewired build"
   },
   "eslintConfig": {
     "extends": [
