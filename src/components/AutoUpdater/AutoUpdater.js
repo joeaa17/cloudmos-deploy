@@ -4,7 +4,7 @@ import { useSnackbar } from "notistack";
 import { LinkTo } from "../../shared/components/LinkTo";
 import { Snackbar } from "../../shared/components/Snackbar";
 
-const ipcApi = window.electron.api;
+const ipcApi = window.api;
 
 const useStyles = makeStyles((theme) => ({
   root: {},
@@ -39,32 +39,7 @@ export const AutoUpdater = () => {
   const classes = useStyles();
 
   useEffect(() => {
-    ipcApi.receive("update_available", (event) => {
-      ipcApi.removeAllListeners("update_available");
-
-      console.log("Update available", event);
-
-      showNewUpdateSnackbar(event.releaseNotes, event.releaseName, event.releaseDate);
-    });
-    ipcApi.receive("update_downloaded", (event) => {
-      ipcApi.removeAllListeners("update_downloaded");
-
-      console.log("Update downloaded:", event);
-
-      showUpdateDownloadedSnackbar(event.releaseNotes, event.releaseName, event.releaseDate);
-    });
-
-    ipcApi.send("check_update");
-
-    // Check for udpates every 30 seconds
-    intervalUpdateCheck.current = setInterval(() => {
-      ipcApi.send("check_update");
-    }, 60000);
-
-    return () => {
-      clearInterval(intervalUpdateCheck.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   /**
@@ -83,7 +58,7 @@ export const AutoUpdater = () => {
           <div>
             <Box marginBottom={1}>
               A new update {releaseName} is available! Download now?{" "}
-              <LinkTo className={classes.white} onClick={() => window.electron.openUrl("https://github.com/Akashlytics/akashlytics-deploy/releases")}>
+              <LinkTo className={classes.white} onClick={() => window.open("https://github.com/maxmaxlabs/cloudmos-deploy/releases")}>
                 View release notes
               </LinkTo>
             </Box>
@@ -144,7 +119,7 @@ export const AutoUpdater = () => {
           <div>
             <Box marginBottom=".5rem">
               Update {releaseName} Downloaded! It will be installed on restart.{" "}
-              <LinkTo className={classes.white} onClick={() => window.electron.openUrl("https://github.com/Akashlytics/akashlytics-deploy/releases")}>
+              <LinkTo className={classes.white} onClick={() => window.open("https://github.com/maxmaxlabs/cloudmos-deploy/releases")}>
                 View release notes
               </LinkTo>
             </Box>

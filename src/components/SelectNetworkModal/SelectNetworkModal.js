@@ -20,7 +20,7 @@ import { mainnetId } from "../../shared/constants";
 import { useSettings } from "../../context/SettingsProvider";
 import { Alert } from "@material-ui/lab";
 
-const ipcApi = window.electron.api;
+const ipcApi = window.api;
 
 const useStyles = makeStyles((theme) => ({
   list: {},

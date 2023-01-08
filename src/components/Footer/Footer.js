@@ -84,15 +84,15 @@ export const Footer = () => {
             </>
           )}
 
-          <LinkTo onClick={() => window.electron.openUrl("https://akash.network")} className={classes.akashLink}>
-            <img src="./images/powered-by-akash.svg" alt="Akashlytics Logo" className={classes.akashImage} />
+          <LinkTo onClick={() => window.open("https://akash.network")} className={classes.akashLink}>
+            <img src="./images/powered-by-akash.svg" alt="Akash Logo" className={classes.akashImage} />
           </LinkTo>
         </Box>
 
         <Box display="flex" alignItems="center">
           <Box marginRight="1rem">
             <Button
-              onClick={() => window.electron.openUrl("https://www.mintscan.io/akash/validators/akashvaloper14mt78hz73d9tdwpdvkd59ne9509kxw8yj7qy8f")}
+              onClick={() => window.open("https://cloudmos.io/validators/akashvaloper14mt78hz73d9tdwpdvkd59ne9509kxw8yj7qy8f")}
               size="small"
             >
               <Typography variant="caption" className={classes.caption}>
@@ -103,25 +103,25 @@ export const Footer = () => {
 
           <ul className={classes.socialLinks}>
             <li>
-              <LinkTo onClick={() => window.electron.openUrl("https://discord.gg/rXDFNYnFwv")} className={classes.socialLink}>
+              <LinkTo onClick={() => window.open("https://discord.gg/rXDFNYnFwv")} className={classes.socialLink}>
                 <DiscordIcon className={classes.socialIcon} />
               </LinkTo>
             </li>
             <li>
               <LinkTo
-                onClick={() => window.electron.openUrl("https://www.youtube.com/channel/UC1rgl1y8mtcQoa9R_RWO0UA?sub_confirmation=1")}
+                onClick={() => window.open("https://www.youtube.com/channel/UC1rgl1y8mtcQoa9R_RWO0UA?sub_confirmation=1")}
                 className={classes.socialLink}
               >
                 <YouTubeIcon className={classes.socialIcon} />
               </LinkTo>
             </li>
             <li>
-              <LinkTo onClick={() => window.electron.openUrl("https://twitter.com/akashlytics")} className={classes.socialLink}>
+              <LinkTo onClick={() => window.open("https://twitter.com/cloudmosio")} className={classes.socialLink}>
                 <TwitterIcon className={classes.socialIcon} />
               </LinkTo>
             </li>
             <li>
-              <LinkTo onClick={() => window.electron.openUrl("https://github.com/Akashlytics/akashlytics-deploy")} className={classes.socialLink}>
+              <LinkTo onClick={() => window.open("https://github.com/maxmaxlabs/cloudmos-deploy")} className={classes.socialLink}>
                 <GitHubIcon className={classes.socialIcon} />
               </LinkTo>
             </li>

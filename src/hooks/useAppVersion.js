@@ -4,7 +4,7 @@ export const useAppVersion = () => {
   const [appVersion, setAppVersion] = useState(null);
 
   useEffect(() => {
-    setAppVersion(window.electron.getAppVersion());
+    setAppVersion("1.0.0");
   }, []);
 
   return {

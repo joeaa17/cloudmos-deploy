@@ -30,14 +30,14 @@ export const WelcomeModal = ({ open, onClose }) => {
           <strong>Welcome!</strong>
         </Typography>
         <Typography variant="h6" className={classes.subTitle} color="textSecondary">
-          You need to get some <LinkTo onClick={() => window.electron.openUrl("https://coinmarketcap.com/currencies/akash-network/")}>$AKT</LinkTo> in order to
+          You need to get some <LinkTo onClick={() => window.open("https://coinmarketcap.com/currencies/akash-network/")}>$AKT</LinkTo> in order to
           deploy the Akash Network.
         </Typography>
         <Typography variant="caption">Here are some places to acquire some:</Typography>
 
         <ul className={classes.ul}>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://docs.akash.network/token/buy")}>Buy tokens</LinkTo>
+            <LinkTo onClick={() => window.open("https://docs.akash.network/token/buy")}>Buy tokens</LinkTo>
           </li>
           <Box marginTop="1rem">
             <hr />
@@ -46,31 +46,31 @@ export const WelcomeModal = ({ open, onClose }) => {
             <strong>Exchanges</strong>
           </Typography>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://app.osmosis.zone/")}>Osmosis (DEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://app.osmosis.zone/")}>Osmosis (DEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://emeris.com/")}>Emeris (DEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://emeris.com/")}>Emeris (DEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://dex.sifchain.finance/")}>Sifchain (DEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://dex.sifchain.finance/")}>Sifchain (DEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://www.kraken.com/")}>Kraken (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://www.kraken.com/")}>Kraken (CEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://ascendex.com/")}>Ascendex (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://ascendex.com/")}>Ascendex (CEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://global.bittrex.com/")}>Bittrex (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://global.bittrex.com/")}>Bittrex (CEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://www.bitmart.com/")}>Bitmart (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://www.bitmart.com/")}>Bitmart (CEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://www.digifinex.com/")}>Digifinex (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://www.digifinex.com/")}>Digifinex (CEX)</LinkTo>
           </li>
           <li>
-            <LinkTo onClick={() => window.electron.openUrl("https://www.bitglobal.com/")}>Bitglobal (CEX)</LinkTo>
+            <LinkTo onClick={() => window.open("https://www.bitglobal.com/")}>Bitglobal (CEX)</LinkTo>
           </li>
         </ul>
 

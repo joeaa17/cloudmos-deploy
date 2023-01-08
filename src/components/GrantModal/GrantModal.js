@@ -82,7 +82,7 @@ export const GrantModal = ({ address, onClose }) => {
   function handleDocClick(ev, url) {
     ev.preventDefault();
 
-    window.electron.openUrl(url);
+    window.open(url);
   }
 
   return (

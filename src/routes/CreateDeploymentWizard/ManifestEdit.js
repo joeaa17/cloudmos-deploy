@@ -48,9 +48,12 @@ export function ManifestEdit(props) {
   const history = useHistory();
   const classes = useStyles();
 
-  async function handleTextChange(value) {
-    setEditedManifest(value);
-  }
+  useEffect(() => {
+    if (selectedTemplate?.name) {
+      setDeploymentName(selectedTemplate.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const timer = Timer(500);
@@ -66,6 +69,10 @@ export function ManifestEdit(props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editedManifest]);
+
+  async function handleTextChange(value) {
+    setEditedManifest(value);
+  }
 
   async function createAndValidateDeploymentData(yamlStr, dseq = null, deposit = defaultInitialDeposit, depositorAddress = null) {
     try {
@@ -93,9 +100,12 @@ export function ManifestEdit(props) {
   function handleDocClick(ev, url) {
     ev.preventDefault();
 
-    window.electron.openUrl(url);
+    window.open(url);
   }
 
+  /**
+   * Validate values to change in the template
+   */
   function validateDeploymentData(deploymentData) {
     if (selectedTemplate.valuesToChange) {
       for (const valueToChange of selectedTemplate.valuesToChange) {
@@ -138,11 +148,12 @@ export function ManifestEdit(props) {
         history.replace("/createDeployment/acceptBids/" + dd.deploymentId.dseq);
 
         await analytics.event("deploy", "create deployment");
+      } else {
+        setIsCreatingDeployment(false);
       }
     } catch (error) {
-      throw error;
-    } finally {
       setIsCreatingDeployment(false);
+      throw error;
     }
   }
 

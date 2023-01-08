@@ -33,7 +33,7 @@ export function PrerequisiteList({ selectedTemplate, setSelectedTemplate }) {
   const history = useHistory();
   const queryParams = useQueryParams();
   const { getDeploymentData } = useLocalNotes();
-  const { getTemplateByPath } = useTemplates();
+  const { getTemplateById } = useTemplates();
 
   const allCheckSucceeded = isCertificateValidated && isLocalCertificateValidated;
 
@@ -56,9 +56,10 @@ export function PrerequisiteList({ selectedTemplate, setSelectedTemplate }) {
       setIsLoadingPrerequisites(true);
 
       const balance = await refreshBalance();
-      const certificate = await loadValidCertificates();
+      const validCertificates = await loadValidCertificates();
+      const currentCert = validCertificates.find((x) => x.parsed === localCert?.certPem);
       const isBalanceValidated = balance >= 5000000;
-      const isCertificateValidated = certificate?.certificate?.state === "valid";
+      const isCertificateValidated = currentCert?.certificate?.state === "valid";
       const isLocalCertificateValidated = !!localCert && isLocalCertMatching;
 
       setIsBalanceValidated(isBalanceValidated);
@@ -90,6 +91,7 @@ export function PrerequisiteList({ selectedTemplate, setSelectedTemplate }) {
 
       if (deploymentData && deploymentData.manifest) {
         template = {
+          name: deploymentData.name,
           code: "empty",
           content: deploymentData.manifest
         };
@@ -101,13 +103,13 @@ export function PrerequisiteList({ selectedTemplate, setSelectedTemplate }) {
 
   const getGalleryTemplate = () => {
     let template = null;
-    if (queryParams.get("templatePath")) {
-      const templateByPath = getTemplateByPath(queryParams.get("templatePath"));
-      if (templateByPath) {
+    if (queryParams.get("templateId")) {
+      const templateById = getTemplateById(queryParams.get("templateId"));
+      if (templateById) {
         template = {
           code: "empty",
-          content: templateByPath.deploy,
-          valuesToChange: templateByPath.valuesToChange || []
+          content: templateById.deploy,
+          valuesToChange: templateById.valuesToChange || []
         };
       }
     }
