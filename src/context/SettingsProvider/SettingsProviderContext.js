@@ -47,7 +47,7 @@ export const SettingsProvider = ({ children }) => {
 
       // Set the available nodes list and default endpoints
       const currentNetwork = networks.find((x) => x.id === selectedNetworkId) || mainnetNodes;
-      const response = await axios.get(currentNetwork.nodesUrl);
+      const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+currentNetwork.nodesUrl);
       let nodes = response.data;
 
       const hasSettings =
@@ -132,7 +132,7 @@ export const SettingsProvider = ({ children }) => {
       nodeInfo = {};
 
     try {
-      const response = await axios.get(`${nodeUrl}/node_info`, { timeout: 10000 });
+      const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+`${nodeUrl}/node_info`, { timeout: 10000 });
       nodeInfo = response.data;
       status = "active";
     } catch (error) {

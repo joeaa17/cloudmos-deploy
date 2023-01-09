@@ -6,7 +6,7 @@ import { useSettings } from "../context/SettingsProvider";
 
 // Block
 async function getBlock(apiEndpoint, id) {
-  const response = await axios.get(ApiUrlService.block(apiEndpoint, id));
+  const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+ApiUrlService.block(apiEndpoint, id));
 
   return response.data;
 }

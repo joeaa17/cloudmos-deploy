@@ -1,10 +1,9 @@
-const path = require("path");
-
-const { nanoid } = require("nanoid");
+import path from "path";
+import { nanoid } from "nanoid";
+import spawn from "child_process";
 
 let child = null;
 function spawnProxy() {
-  const spawn = require("child_process").spawn;
 
   const dir = __dirname.replace("asar", "asar.unpacked");
   const command = path.join(dir, getProxyFilePath());
@@ -111,7 +110,7 @@ async function makeRequest(url, method, body, certPem, keyPem) {
   });
 }
 
-exports.queryProvider = async function (url, method, body, certPem, prvPem) {
+const providerProxy = async function (url, method, body, certPem, prvPem) {
   // console.log("Querying provider using proxy");
 
   try {
@@ -126,7 +125,7 @@ exports.queryProvider = async function (url, method, body, certPem, prvPem) {
 };
 
 function getProxyFilePath() {
-  switch (process.platform) {
+  switch (""){ //(process.platform) {
     case "win32":
       return "./tools/cloudmos-provider-proxy.exe";
     case "linux":
@@ -134,6 +133,9 @@ function getProxyFilePath() {
     case "darwin":
       return "./tools/cloudmos-provider-proxy";
     default:
-      throw new Error("Unsupported platform: " + process.platform);
+      return "";
+      // throw new Error("Unsupported platform: " + process.platform);
   }
 }
+
+export default providerProxy;
