@@ -25,7 +25,7 @@
     "build-linux": "cross-env GENERATE_SOURCEMAP=false react-app-rewired build && electron-builder --linux",
     "dist-mac": "cross-env DEBUG=electron-builder electron-builder --mac",
     "release": "react-app-rewired build && electron-builder --windows --publish always",
-    "build": "cross-env GENERATE_SOURCEMAP=false BROWSER=none react-app-rewired build"
+    "build": "cross-env BROWSER=none react-app-rewired build --scripts-version react-scripts"
   },
   "eslintConfig": {
     "extends": [
@@ -102,6 +102,5 @@
     "monaco-editor-webpack-plugin": "^4.1.2",
     "react-app-rewired": "^2.1.8"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
