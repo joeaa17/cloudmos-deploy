@@ -4,7 +4,7 @@ import axios from "axios";
 import { cloudmosApi } from "../shared/constants";
 
 async function getTemplates() {
-  const response = await axios.get('http://proxy-cors-005.herokuapp.com/'+`${cloudmosApi}/templates`);
+  const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+`${cloudmosApi}/templates`);
   let categories = response.data.filter((x) => (x.templates || []).length > 0);
   categories.forEach((c) => {
     c.templates.forEach((t) => (t.category = c.title));
