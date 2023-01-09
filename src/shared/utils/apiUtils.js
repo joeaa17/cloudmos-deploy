@@ -56,7 +56,7 @@ export async function loadWithPagination(baseUrl, dataKey, limit) {
       queryUrl += "&pagination.key=" + encodeURIComponent(nextKey);
     }
     // console.log(`Querying ${dataKey} [${callCount}] from : ${queryUrl}`);
-    const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+queryUrl);
+    const response = await axios.get('http://proxy-cors-005.herokuapp.com/'+queryUrl);
     const data = response.data;
 
     // if (!nextKey) {

@@ -27,7 +27,7 @@ export const CertificateProvider = ({ children }) => {
       setIsLoadingCertificates(true);
 
       try {
-        const response = await axios.get('https://proxy-cors-005.herokuapp.com/'+`${apiEndpoint}/akash/cert/${networkVersion}/certificates/list?filter.state=valid&filter.owner=${address}`);
+        const response = await axios.get('http://proxy-cors-005.herokuapp.com/'+`${apiEndpoint}/akash/cert/${networkVersion}/certificates/list?filter.state=valid&filter.owner=${address}`);
         const certs = (response.data.certificates || []).map((cert) => {
           const parsed = atob(cert.certificate.cert);
           const pem = getCertPem(parsed);
