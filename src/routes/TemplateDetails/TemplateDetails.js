@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { useTemplates } from "../../context/TemplatesProvider";
 import MonacoEditor from "react-monaco-editor";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { UrlService } from "../../shared/utils/urlUtils";
 import { Helmet } from "react-helmet-async";
 import { ViewPanel } from "../../shared/components/ViewPanel";
@@ -26,7 +27,7 @@ const useStyles = makeStyles((theme) => ({
   },
   titleContainer: {
     display: "flex",
-    padding: "1rem"
+    padding: "0.5rem 1rem"
   },
   deployBtn: {
     marginLeft: "2rem"
@@ -35,25 +36,25 @@ const useStyles = makeStyles((theme) => ({
 
 export function TemplateDetails() {
   const [activeTab, setActiveTab] = useState("README");
-  const { templatePath } = useParams();
-  const { getTemplateByPath } = useTemplates();
+  const { templateId } = useParams();
+  const { getTemplateById } = useTemplates();
   const history = useHistory();
   const classes = useStyles();
-  const template = getTemplateByPath(templatePath);
+  const template = getTemplateById(templateId);
 
   function handleBackClick() {
     history.goBack();
   }
 
   function handleOpenGithub() {
-    window.electron.openUrl(template.githubUrl);
+    window.open(template.githubUrl);
   }
 
   return (
-    <Box className={classes.root}>
+    <div className={classes.root}>
       <Helmet title="Deployment Detail" />
 
-      <Box className={classes.titleContainer}>
+      <div className={classes.titleContainer}>
         <Box display="flex" alignItems="center">
           <IconButton aria-label="back" onClick={handleBackClick}>
             <ChevronLeftIcon />
@@ -75,12 +76,12 @@ export function TemplateDetails() {
           size="medium"
           color="primary"
           component={Link}
-          to={UrlService.createDeploymentFromTemplate(template.path)}
+          to={UrlService.createDeploymentFromTemplate(template.id)}
         >
           <PublishIcon />
           &nbsp;Deploy
         </Button>
-      </Box>
+      </div>
 
       <Tabs value={activeTab} onChange={(ev, value) => setActiveTab(value)} indicatorColor="primary" textColor="primary">
         <Tab value="README" label="README" />
@@ -90,19 +91,23 @@ export function TemplateDetails() {
 
       {activeTab === "README" && (
         <ViewPanel bottomElementId="footer" overflow="auto" padding="1rem">
-          <ReactMarkdown linkTarget="_blank">{template.readme}</ReactMarkdown>
+          <ReactMarkdown linkTarget="_blank" remarkPlugins={[remarkGfm]} className="markdownContainer">
+            {template.readme}
+          </ReactMarkdown>
         </ViewPanel>
       )}
       {activeTab === "SDL" && (
         <ViewPanel bottomElementId="footer" overflow="hidden">
-          <MonacoEditor height="100%" language="yaml" theme="vs-dark" value={template.deploy} options={monacoOptions} />
+          <MonacoEditor height="100%" language="yaml" theme="vs-dark" value={template.deploy} options={{ ...monacoOptions, readOnly: true }} />
         </ViewPanel>
       )}
       {activeTab === "GUIDE" && (
         <ViewPanel bottomElementId="footer" overflow="auto" padding="1rem">
-          <ReactMarkdown linkTarget="_blank">{template.guide}</ReactMarkdown>
+          <ReactMarkdown linkTarget="_blank" remarkPlugins={[remarkGfm]} className="markdownContainer">
+            {template.guide}
+          </ReactMarkdown>
         </ViewPanel>
       )}
-    </Box>
+    </div>
   );
 }

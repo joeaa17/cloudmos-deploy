@@ -1,4 +1,4 @@
-import { networkVersion, akashlyticsApi } from "../constants";
+import { networkVersion, cloudmosApi } from "../constants";
 import axios from "axios";
 
 export class ApiUrlService {
@@ -12,10 +12,13 @@ export class ApiUrlService {
     return `${apiEndpoint}/akash/market/${networkVersion}/bids/list?filters.owner=${address}&filters.dseq=${dseq}`;
   }
   static leaseList(apiEndpoint, address, dseq) {
-    return `${apiEndpoint}/akash/market/${networkVersion}/leases/list?filters.owner=${address}&filters.dseq=${dseq}`;
+    return `${apiEndpoint}/akash/market/${networkVersion}/leases/list?filters.owner=${address}${dseq ? "&filters.dseq=" + dseq : ""}`;
   }
   static providers(apiEndpoint) {
     return `${apiEndpoint}/akash/provider/${networkVersion}/providers`;
+  }
+  static providerDetail(apiEndpoint, owner) {
+    return `${apiEndpoint}/akash/provider/${networkVersion}/providers/${owner}`;
   }
   static block(apiEndpoint, id) {
     return `${apiEndpoint}/blocks/${id}`;
@@ -36,7 +39,7 @@ export class ApiUrlService {
     return `${apiEndpoint}/cosmos/staking/v1beta1/delegators/${address}/unbonding_delegations`;
   }
   static networkCapacity() {
-    return `${akashlyticsApi}/getNetworkCapacity`;
+    return `${cloudmosApi}/getNetworkCapacity`;
   }
 }
 

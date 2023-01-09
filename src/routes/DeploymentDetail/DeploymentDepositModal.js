@@ -12,7 +12,6 @@ import {
   InputAdornment,
   Box,
   TextField,
-  Chip,
   CircularProgress
 } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
@@ -20,12 +19,12 @@ import { useWallet } from "../../context/WalletProvider";
 import { aktToUakt, coinToUAkt, uaktToAKT } from "../../shared/utils/priceUtils";
 import { useForm, Controller } from "react-hook-form";
 import { LinkTo } from "../../shared/components/LinkTo";
-import { fees } from "../../shared/utils/blockchainUtils";
 import { useSettings } from "../../context/SettingsProvider";
 import { useSnackbar } from "notistack";
 import { Snackbar } from "../../shared/components/Snackbar";
 import compareAsc from "date-fns/compareAsc";
 import { analytics } from "../../shared/utils/analyticsUtils";
+import { txFeeBuffer } from "../../shared/utils/blockchainUtils";
 
 const useStyles = makeStyles((theme) => ({
   alert: {
@@ -47,7 +46,6 @@ export function DeploymentDepositModal({ handleCancel, onDeploymentDeposit, min 
   const { settings } = useSettings();
   const { enqueueSnackbar } = useSnackbar();
   const [error, setError] = useState("");
-  const [isBalanceClicked, setIsBalanceClicked] = useState(false);
   const [isCheckingDepositor, setIsCheckingDepositor] = useState(false);
   const { balance, address } = useWallet();
   const {
@@ -122,9 +120,8 @@ export function DeploymentDepositModal({ handleCancel, onDeploymentDeposit, min 
   };
 
   const onBalanceClick = () => {
-    setIsBalanceClicked((prev) => !prev);
     clearErrors();
-    setValue("amount", uaktToAKT(balance - fees.high, 6));
+    setValue("amount", uaktToAKT(balance - txFeeBuffer, 6));
   };
 
   const onDepositClick = (event) => {
@@ -154,7 +151,6 @@ export function DeploymentDepositModal({ handleCancel, onDeploymentDeposit, min 
       return;
     }
 
-    setIsBalanceClicked(false);
     onDeploymentDeposit(deposit, depositorAddress);
   };
 
@@ -189,16 +185,10 @@ export function DeploymentDepositModal({ handleCancel, onDeploymentDeposit, min 
                     error={!!fieldState.invalid}
                     helperText={fieldState.invalid && helperText}
                     className={classes.formValue}
-                    inputProps={{ min: min, step: 0.000001, max: uaktToAKT(balance - fees.high, 6) }}
+                    inputProps={{ min: min, step: 0.000001, max: uaktToAKT(balance - txFeeBuffer, 6) }}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start">AKT</InputAdornment>,
-                      endAdornment: isBalanceClicked && (
-                        <InputAdornment position="end">
-                          <Chip label="MAX" size="small" color="primary" />
-                        </InputAdornment>
-                      )
+                      startAdornment: <InputAdornment position="start">AKT</InputAdornment>
                     }}
-                    disabled={isBalanceClicked}
                   />
                 );
               }}

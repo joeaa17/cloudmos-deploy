@@ -12,11 +12,10 @@ import { TransactionMessageData } from "../../shared/utils/TransactionMessageDat
 import { useTransactionModal } from "../../context/TransactionModal";
 import { useSettings } from "../../context/SettingsProvider";
 import { UrlService } from "../../shared/utils/urlUtils";
-import { useBalances } from "../../queries/useBalancesQuery";
 import { DashboardInfoPanel } from "./DashboardInfoPanel";
-import { useProviders } from "../../queries";
+import { useProviders, useBalances, useNetworkCapacity } from "../../queries";
 import { LinkTo } from "../../shared/components/LinkTo";
-import { useNetworkCapacity } from "../../queries/useProvidersQuery";
+import { useLocalNotes } from "../../context/LocalNoteProvider";
 
 const useStyles = makeStyles((theme) => ({
   titleContainer: {
@@ -38,7 +37,20 @@ const useStyles = makeStyles((theme) => ({
 
 export function Dashboard({ deployments, isLoadingDeployments, refreshDeployments }) {
   const classes = useStyles();
-  const orderedDeployments = deployments ? [...deployments].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).filter((d) => d.state === "active") : [];
+  const { getDeploymentName } = useLocalNotes();
+  const orderedDeployments = deployments
+    ? [...deployments]
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        .filter((d) => d.state === "active")
+        .map((d) => {
+          const name = getDeploymentName(d.dseq);
+
+          return {
+            ...d,
+            name
+          };
+        })
+    : [];
   const [selectedDeploymentDseqs, setSelectedDeploymentDseqs] = useState([]);
   const { address } = useWallet();
   const { sendTransaction } = useTransactionModal();
@@ -54,11 +66,11 @@ export function Dashboard({ deployments, isLoadingDeployments, refreshDeployment
     getNetworkCapacity();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [address]);
 
   useEffect(() => {
     refreshDeployments();
-  }, [refreshDeployments, apiEndpoint]);
+  }, [refreshDeployments, apiEndpoint, address]);
 
   const onSelectDeployment = (checked, dseq) => {
     setSelectedDeploymentDseqs((prev) => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCertificate } from "../../context/CertificateProvider";
 import { makeStyles, Checkbox, FormControlLabel, Box, Button, CircularProgress } from "@material-ui/core";
-import { useProviders } from "../../queries";
+import { useProviders, useLeaseStatus } from "../../queries";
 import { ToggleButtonGroup, ToggleButton, Alert } from "@material-ui/lab";
 import * as monaco from "monaco-editor";
 import { monacoOptions } from "../../shared/constants";
@@ -10,7 +10,6 @@ import { LinearLoadingSkeleton } from "../../shared/components/LinearLoadingSkel
 import { useThrottledCallback } from "../../hooks/useThrottle";
 import { useAsyncTask } from "../../context/AsyncTaskProvider";
 import { SelectCheckbox } from "../../shared/components/SelectCheckbox";
-import { useLeaseStatus } from "../../queries/useLeaseQuery";
 import { LeaseSelect } from "./LeaseSelect";
 import { MemoMonaco } from "../../shared/components/MemoMonaco";
 import { analytics } from "../../shared/utils/analyticsUtils";
@@ -67,6 +66,19 @@ export function DeploymentLogs({ leases, selectedLogsMode, setSelectedLogsMode }
   }, []);
 
   useEffect(() => {
+    if (monacoRef.current) {
+      const editor = monacoRef.current.editor;
+
+      editor.onDidScrollChange((event) => {
+        if (event.scrollTop < event._oldScrollTop) {
+          setStickToBottom(false);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monacoRef.current]);
+
+  useEffect(() => {
     // Set the services and default selected services
     if (leaseStatus) {
       setServices(Object.keys(leaseStatus.services));
@@ -120,6 +132,10 @@ export function DeploymentLogs({ leases, selectedLogsMode, setSelectedLogsMode }
     socket?.close();
     socket = window.electron.openWebSocket(url, localCert.certPem, localCert.keyPem, (message) => {
       setIsLoadingLogs(true);
+
+      if (logs.current.length === 0) {
+        setStickToBottom(true);
+      }
 
       let parsedLog = null;
       if (selectedLogsMode === "logs") {

@@ -43,9 +43,13 @@ export async function ManifestVersion(manifest) {
   jsonStr = jsonStr.replaceAll('"mount":', '"readOnlyTmp":');
   jsonStr = jsonStr.replaceAll('"readOnly":', '"mount":');
   jsonStr = jsonStr.replaceAll('"readOnlyTmp":', '"readOnly":');
-  //console.log(jsonStr);
-  //console.log(SortJSON(jsonStr));
+
+  // console.log(jsonStr);
+  // console.log(SortJSON(jsonStr));
+
   let sortedBytes = enc.encode(SortJSON(jsonStr));
+
+  // console.log(sortedBytes);
 
   let sum = await crypto.subtle.digest("SHA-256", sortedBytes);
 
@@ -88,7 +92,7 @@ export function ParseServiceProtocol(input) {
       result = "UDP";
       break;
     default:
-      throw new Error("ErrUnsupportedServiceProtocol");
+      throw new CustomValidationError("Unsupported Service Protocol " + input);
   }
 
   return result;

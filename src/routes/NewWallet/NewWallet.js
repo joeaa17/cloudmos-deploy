@@ -1,20 +1,21 @@
 import { Button, makeStyles, Container, Typography, ButtonGroup, Box, FormControl, TextField, CircularProgress } from "@material-ui/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { UrlService } from "../../shared/utils/urlUtils";
-import { generateNewWallet } from "../../shared/utils/walletUtils";
+import { generateNewWallet, importWallet, validateWallets } from "../../shared/utils/walletUtils";
 import Alert from "@material-ui/lab/Alert";
 import { useWallet } from "../../context/WalletProvider";
 import { useForm, Controller } from "react-hook-form";
 import { TitleLogo } from "../../shared/components/TitleLogo";
-import { importWallet } from "../../shared/utils/walletUtils";
 import { analytics } from "../../shared/utils/analyticsUtils";
 import { useSnackbar } from "notistack";
 import { Snackbar } from "../../shared/components/Snackbar";
 import { HdPath } from "../../shared/components/HdPath";
 import { MnemonicTextarea } from "../../shared/components/MnemonicTextarea";
-import { arrayEquals } from "../../shared/utils/array";
 import { Layout } from "../../shared/components/Layout";
+import { useQueryParams } from "../../hooks/useQueryParams";
+import { useCertificate } from "../../context/CertificateProvider";
+import isEqual from "lodash/isEqual";
 
 const useStyles = makeStyles((theme) => ({
   root: { padding: "5% 0" },
@@ -53,6 +54,7 @@ const useStyles = makeStyles((theme) => ({
 
 export function NewWallet() {
   const classes = useStyles();
+  const walletsRef = useRef();
   const { enqueueSnackbar } = useSnackbar();
   const [numberOfWords, setNumberOfWords] = useState(12);
   const [error, setError] = useState("");
@@ -63,6 +65,8 @@ export function NewWallet() {
   const [isKeyValidated, setIsKeyValidated] = useState(false);
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
   const [selectedWords, setSelectedWords] = useState([]);
+  const queryParams = useQueryParams();
+  const isAddAccount = !!queryParams.get("add");
   const [hdPath, setHdPath] = useState({ account: 0, change: 0, addressIndex: 0 });
   const history = useHistory();
   const {
@@ -79,7 +83,8 @@ export function NewWallet() {
     }
   });
   const { password } = watch();
-  const { setSelectedWallet } = useWallet();
+  const { setSelectedWallet, setWallets } = useWallet();
+  const { setLocalCert, setValidCertificates, setSelectedCertificate, loadLocalCert } = useCertificate();
 
   useEffect(() => {
     const init = async () => {
@@ -98,9 +103,8 @@ export function NewWallet() {
     setNewWallet(wallet);
     const shuffled = wallet.mnemonic
       .split(" ")
-      .map((value) => ({ value, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .map(({ value }) => value);
+      .map((value, i) => ({ value, sort: Math.random(), originalIndex: i }))
+      .sort((a, b) => a.sort - b.sort);
 
     setShuffledMnemonic(shuffled);
 
@@ -118,12 +122,17 @@ export function NewWallet() {
       if (shouldAdd) {
         newWords = prevWords.concat([word]);
       } else {
-        newWords = prevWords.filter((w) => w !== word);
+        newWords = prevWords.filter((w) => w.originalIndex !== word.originalIndex);
       }
 
       const originalMnemonic = newWallet.mnemonic.split(" ");
       if (newWords.length === originalMnemonic.length) {
-        if (arrayEquals(newWords, originalMnemonic)) {
+        if (
+          isEqual(
+            newWords.map((w) => w.value),
+            originalMnemonic
+          )
+        ) {
           setIsKeyValidated(true);
           setError("");
         } else {
@@ -143,7 +152,7 @@ export function NewWallet() {
       setIsKeyValidated(false);
       setSelectedWords([]);
     } else {
-      history.push(UrlService.register());
+      history.goBack();
     }
   };
 
@@ -158,24 +167,49 @@ export function NewWallet() {
   const onSubmit = async ({ name, password }) => {
     clearErrors();
 
-    if (isKeyValidated) {
-      try {
+    try {
+      if (isKeyValidated) {
         setIsCreatingWallet(true);
+
         const { account, change, addressIndex } = hdPath;
 
         const importedWallet = await importWallet(newWallet.mnemonic, name, password, account, change, addressIndex);
+        const newWallets = walletsRef.current.concat([importedWallet]);
+
+        for (let i = 0; i < newWallets.length; i++) {
+          newWallets[i].selected = newWallets[i].address === importedWallet.address;
+        }
+
+        setWallets(newWallets);
         setSelectedWallet(importedWallet);
+        setValidCertificates([]);
+        setSelectedCertificate(null);
+        setLocalCert(null);
+
+        // Load local certificates
+        loadLocalCert(password);
 
         await analytics.event("deploy", "create wallet");
 
         history.replace(UrlService.dashboard());
-      } catch (error) {
-        console.error(error);
-        enqueueSnackbar(<Snackbar title="An error has occured" subTitle={error.message} iconVariant="error" />, { variant: "error" });
+      } else {
+        setIsCreatingWallet(true);
+
+        // validate that all wallets have the same password
+        walletsRef.current = await validateWallets(password);
+
+        setIsKeyValidating(true);
         setIsCreatingWallet(false);
       }
-    } else {
-      setIsKeyValidating(true);
+    } catch (error) {
+      if (error.message === "ciphertext cannot be decrypted using that key") {
+        enqueueSnackbar(<Snackbar title="Invalid password" iconVariant="error" />, { variant: "error" });
+      } else {
+        console.error(error);
+        enqueueSnackbar(<Snackbar title="An error has occured" subTitle={error.message} iconVariant="error" />, { variant: "error" });
+      }
+
+      setIsCreatingWallet(false);
     }
   };
 
@@ -201,7 +235,7 @@ export function NewWallet() {
                       key={`selected_word_${i}`}
                       size="small"
                     >
-                      {word}
+                      {word.value}
                     </Button>
                   ))}
                 </div>
@@ -210,10 +244,10 @@ export function NewWallet() {
 
                 <div>
                   {shuffledMnemonic
-                    .filter((w) => !selectedWords.some((_) => _ === w))
+                    .filter((w) => !selectedWords.some((_) => _.value === w.value && _.originalIndex === w.originalIndex))
                     .map((word, i) => (
                       <Button onClick={() => onWordClick(word, true)} className={classes.wordButton} variant="outlined" size="small" key={`word_${i}`}>
-                        {word}
+                        {word.value}
                       </Button>
                     ))}
                 </div>
@@ -306,30 +340,32 @@ export function NewWallet() {
                   />
                 </FormControl>
 
-                <FormControl error={!errors.confirmPassword} className={classes.formControl} fullWidth>
-                  <Controller
-                    control={control}
-                    name="confirmPassword"
-                    rules={{
-                      required: true,
-                      validate: (value) => !!value && value === password
-                    }}
-                    render={({ fieldState, field }) => {
-                      const helperText = fieldState.error?.type === "validate" ? "Password doesn't match." : "Confirm password is required.";
+                {!isAddAccount && (
+                  <FormControl error={!errors.confirmPassword} className={classes.formControl} fullWidth>
+                    <Controller
+                      control={control}
+                      name="confirmPassword"
+                      rules={{
+                        required: true,
+                        validate: (value) => !!value && value === password
+                      }}
+                      render={({ fieldState, field }) => {
+                        const helperText = fieldState.error?.type === "validate" ? "Password doesn't match." : "Confirm password is required.";
 
-                      return (
-                        <TextField
-                          {...field}
-                          type="password"
-                          variant="outlined"
-                          label="Confirm password"
-                          error={!!fieldState.invalid}
-                          helperText={fieldState.invalid && helperText}
-                        />
-                      );
-                    }}
-                  />
-                </FormControl>
+                        return (
+                          <TextField
+                            {...field}
+                            type="password"
+                            variant="outlined"
+                            label="Confirm password"
+                            error={!!fieldState.invalid}
+                            helperText={fieldState.invalid && helperText}
+                          />
+                        );
+                      }}
+                    />
+                  </FormControl>
+                )}
 
                 <HdPath onChange={onHdPathChange} />
               </>

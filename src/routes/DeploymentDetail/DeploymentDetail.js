@@ -6,8 +6,8 @@ import { useStyles } from "./DeploymentDetail.styles";
 import { DeploymentSubHeader } from "./DeploymentSubHeader";
 import { useWallet } from "../../context/WalletProvider";
 import { DeploymentJsonViewer } from "./DeploymentJsonViewer";
-import { ManifestEditor } from "./ManifestEditor";
-import { useDeploymentDetail, useLeaseList } from "../../queries";
+import { ManifestUpdate } from "./ManifestUpdate";
+import { useDeploymentDetail, useDeploymentLeaseList } from "../../queries";
 import { LinearLoadingSkeleton } from "../../shared/components/LinearLoadingSkeleton";
 import { Helmet } from "react-helmet-async";
 import { DeploymentLogs } from "./DeploymentLogs";
@@ -18,6 +18,7 @@ import { DeploymentDetailTopBar } from "./DeploymentDetailTopBar";
 import { DeploymentLeaseShell } from "./DeploymentLeaseShell";
 import { analytics } from "../../shared/utils/analyticsUtils";
 import { useQueryParams } from "../../hooks/useQueryParams";
+import { useAkash } from "../../context/AkashProvider";
 
 export function DeploymentDetail({ deployments }) {
   const [deployment, setDeployment] = useState(null);
@@ -33,11 +34,17 @@ export function DeploymentDetail({ deployments }) {
     isFetching: isLoadingDeployment,
     refetch: getDeploymentDetail
   } = useDeploymentDetail(address, dseq, { refetchOnMount: false, enabled: false });
-  const { data: leases, isLoading: isLoadingLeases, refetch: getLeases, remove: removeLeases } = useLeaseList(deployment, address, { enabled: !!deployment });
+  const {
+    data: leases,
+    isLoading: isLoadingLeases,
+    refetch: getLeases,
+    remove: removeLeases
+  } = useDeploymentLeaseList(address, deployment, { enabled: !!deployment });
   const hasLeases = leases && leases.length > 0;
   const [leaseRefs, setLeaseRefs] = useState([]);
   const { isLocalCertMatching, localCert } = useCertificate();
   const [deploymentManifest, setDeploymentManifest] = useState(null);
+  const { providers, getProviders, isLoadingProviders } = useAkash();
 
   useEffect(() => {
     if (leases && leases.some((l) => l.state === "active")) {
@@ -77,12 +84,13 @@ export function DeploymentDetail({ deployments }) {
   useEffect(() => {
     if (deployment) {
       loadLeases();
+      getProviders();
 
       const deploymentData = getDeploymentLocalData(dseq);
       setDeploymentManifest(deploymentData?.manifest);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deployment, loadLeases]);
+  }, [deployment, loadLeases, dseq, localCert]);
 
   useEffect(() => {
     if (deploymentDetail) {
@@ -119,7 +127,7 @@ export function DeploymentDetail({ deployments }) {
     <div className={classes.root}>
       <Helmet title="Deployment Detail" />
 
-      <LinearLoadingSkeleton isLoading={isLoadingLeases || isLoadingDeployment} />
+      <LinearLoadingSkeleton isLoading={isLoadingLeases || isLoadingDeployment || isLoadingProviders} />
 
       <DeploymentDetailTopBar
         address={address}
@@ -130,60 +138,72 @@ export function DeploymentDetail({ deployments }) {
       />
 
       {deployment && (
-        <DeploymentSubHeader deployment={deployment} deploymentCost={hasLeases ? leases.reduce((prev, current) => prev + current.price.amount, 0) : 0} />
-      )}
+        <>
+          <DeploymentSubHeader deployment={deployment} leases={leases} />
 
-      <Tabs value={activeTab} onChange={onChangeTab} indicatorColor="primary" textColor="primary" classes={{ root: classes.tabsRoot }}>
-        <Tab value="LEASES" label="Leases" classes={{ selected: classes.selectedTab }} />
-        {deployment?.state === "active" && leases?.some((x) => x.state === "active") && (
-          <Tab value="LOGS" label="Logs" classes={{ selected: classes.selectedTab }} />
-        )}
-        {deployment?.state === "active" && leases?.some((x) => x.state === "active") && (
-          <Tab value="SHELL" label="Shell" classes={{ selected: classes.selectedTab }} />
-        )}
-        <Tab value="EDIT" label="View / Edit Manifest" classes={{ selected: classes.selectedTab }} />
-        <Tab value="RAW_DATA" label="Raw Data" classes={{ selected: classes.selectedTab }} />
-      </Tabs>
+          <Tabs value={activeTab} onChange={onChangeTab} indicatorColor="primary" textColor="primary" classes={{ root: classes.tabsRoot }}>
+            <Tab value="LEASES" label="Leases" classes={{ selected: classes.selectedTab }} />
+            {deployment?.state === "active" && leases?.some((x) => x.state === "active") && (
+              <Tab value="LOGS" label="Logs" classes={{ selected: classes.selectedTab }} />
+            )}
+            {deployment?.state === "active" && leases?.some((x) => x.state === "active") && (
+              <Tab value="SHELL" label="Shell" classes={{ selected: classes.selectedTab }} />
+            )}
+            <Tab value="EDIT" label="Update" classes={{ selected: classes.selectedTab }} />
+            <Tab value="RAW_DATA" label="Raw Data" classes={{ selected: classes.selectedTab }} />
+          </Tabs>
 
-      {activeTab === "EDIT" && deployment && leases && (
-        <ManifestEditor
-          deployment={deployment}
-          leases={leases}
-          closeManifestEditor={() => {
-            setActiveTab("LOGS");
-            setSelectedLogsMode("events");
-          }}
-        />
-      )}
-      {activeTab === "LOGS" && <DeploymentLogs leases={leases} selectedLogsMode={selectedLogsMode} setSelectedLogsMode={setSelectedLogsMode} />}
-      {activeTab === "SHELL" && <DeploymentLeaseShell leases={leases} />}
-      {activeTab === "RAW_DATA" && deployment && (
-        <Box display="flex">
-          <DeploymentJsonViewer jsonObj={deployment} title="Deployment JSON" />
-          <DeploymentJsonViewer jsonObj={leases} title="Leases JSON" />
-        </Box>
-      )}
-      {activeTab === "LEASES" && (
-        <Box padding="1rem">
-          {leases && (!localCert || !isLocalCertMatching) && (
-            <Box marginBottom="1rem">
-              <Alert severity="warning">You do not have a valid local certificate. You need to create a new one to view lease status and details.</Alert>
+          {activeTab === "EDIT" && deployment && leases && (
+            <ManifestUpdate
+              deployment={deployment}
+              leases={leases}
+              closeManifestEditor={() => {
+                setActiveTab("LOGS");
+                setSelectedLogsMode("events");
+                loadDeploymentDetail();
+              }}
+            />
+          )}
+          {activeTab === "LOGS" && <DeploymentLogs leases={leases} selectedLogsMode={selectedLogsMode} setSelectedLogsMode={setSelectedLogsMode} />}
+          {activeTab === "SHELL" && <DeploymentLeaseShell leases={leases} />}
+          {activeTab === "RAW_DATA" && deployment && (
+            <Box display="flex">
+              <DeploymentJsonViewer jsonObj={deployment} title="Deployment JSON" />
+              <DeploymentJsonViewer jsonObj={leases} title="Leases JSON" />
             </Box>
           )}
+          {activeTab === "LEASES" && (
+            <Box padding="1rem">
+              {leases && (!localCert || !isLocalCertMatching) && (
+                <Box marginBottom="1rem">
+                  <Alert severity="warning">You do not have a valid local certificate. You need to create a new one to view lease status and details.</Alert>
+                </Box>
+              )}
 
-          {leases &&
-            leases.map((lease, i) => (
-              <LeaseRow key={lease.id} lease={lease} setActiveTab={setActiveTab} ref={leaseRefs[i]} deploymentManifest={deploymentManifest} dseq={dseq} />
-            ))}
+              {leases &&
+                leases.map((lease, i) => (
+                  <LeaseRow
+                    key={lease.id}
+                    lease={lease}
+                    setActiveTab={setActiveTab}
+                    ref={leaseRefs[i]}
+                    deploymentManifest={deploymentManifest}
+                    dseq={dseq}
+                    providers={providers}
+                    loadDeploymentDetail={loadDeploymentDetail}
+                  />
+                ))}
 
-          {!hasLeases && !isLoadingLeases && !isLoadingDeployment && <>This deployment doesn't have any leases</>}
+              {!hasLeases && !isLoadingLeases && !isLoadingDeployment && <>This deployment doesn't have any leases</>}
 
-          {(isLoadingLeases || isLoadingDeployment) && !hasLeases && (
-            <Box textAlign="center" padding="2rem">
-              <CircularProgress />
+              {(isLoadingLeases || isLoadingDeployment) && !hasLeases && (
+                <Box textAlign="center" padding="2rem">
+                  <CircularProgress />
+                </Box>
+              )}
             </Box>
           )}
-        </Box>
+        </>
       )}
     </div>
   );

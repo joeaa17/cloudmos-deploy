@@ -6,10 +6,30 @@ export async function openCert(password, certPem, encryptedKeyPem) {
   const key = rs.KEYUTIL.getKeyFromEncryptedPKCS8PEM(encryptedKeyPem, password);
 
   return {
-    certPem: certPem,
+    certPem,
     keyPem: rs.KEYUTIL.getPEM(key, "PKCS8PRV")
   };
 }
+
+export const getCertPem = (certKey) => {
+  var c = new rs.X509();
+  c.readCertPEM(certKey);
+  var hSerial = c.getSerialNumberHex(); // '009e755e" hexadecimal string
+  var sIssuer = c.getIssuerString(); // '/C=US/O=z2'
+  var sSubject = c.getSubjectString(); // '/C=US/O=z2'
+  var sNotBefore = c.getNotBefore(); // '100513235959Z'
+  var sNotAfter = c.getNotAfter(); // '200513235959Z'
+
+  return {
+    hSerial,
+    sIssuer,
+    sSubject,
+    sNotBefore,
+    sNotAfter,
+    issuedOn: strToDate(sNotBefore),
+    expiresOn: strToDate(sNotAfter)
+  };
+};
 
 export const generateCertificate = (address, password) => {
   const notBefore = new Date();
@@ -65,4 +85,20 @@ function dateToStr(date) {
   const secs = date.getUTCSeconds().toString().padStart(2, "0");
 
   return `${year}${month}${day}${hours}${minutes}${secs}Z`;
+}
+
+/**
+ * 230518223318Z into Date
+ * @param {*} str
+ * @returns Date
+ */
+function strToDate(str) {
+  const year = parseInt(`20${str.substring(0, 2)}`);
+  const month = parseInt(str.substring(2, 4)) - 1;
+  const day = parseInt(str.substring(4, 6));
+  const hours = parseInt(str.substring(6, 8));
+  const minutes = parseInt(str.substring(8, 10));
+  const secs = parseInt(str.substring(10, 12));
+
+  return new Date(Date.UTC(year, month, day, hours, minutes, secs));
 }

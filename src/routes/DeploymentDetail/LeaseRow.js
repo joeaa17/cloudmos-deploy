@@ -10,12 +10,12 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   CircularProgress,
   Button,
   Tooltip,
   Typography,
-  Chip
+  Chip,
+  useTheme
 } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
 import FileCopyIcon from "@material-ui/icons/FileCopy";
@@ -26,8 +26,7 @@ import { SpecDetail } from "../../shared/components/SpecDetail";
 import { useCertificate } from "../../context/CertificateProvider";
 import { copyTextToClipboard } from "../../shared/utils/copyClipboard";
 import { useSnackbar } from "notistack";
-import { useLeaseStatus } from "../../queries/useLeaseQuery";
-import { useProviders } from "../../queries";
+import { useLeaseStatus, useProviderStatus } from "../../queries";
 import { sendManifestToProvider } from "../../shared/utils/deploymentUtils";
 import { deploymentData } from "../../shared/deploymentData";
 import { ManifestErrorSnackbar } from "../../shared/components/ManifestErrorSnackbar";
@@ -37,10 +36,14 @@ import { PricePerMonth } from "../../shared/components/PricePerMonth";
 import { PriceEstimateTooltip } from "../../shared/components/PriceEstimateTooltip";
 import LaunchIcon from "@material-ui/icons/Launch";
 import InfoIcon from "@material-ui/icons/Info";
-import { ProviderAttributes } from "../../shared/components/ProviderAttributes";
-import { ProviderDetail } from "../../components/ProviderDetail/ProviderDetail";
-import { useProviderStatus } from "../../queries/useProvidersQuery";
+import CheckIcon from "@material-ui/icons/CheckCircle";
+import { ProviderDetailModal } from "../../components/ProviderDetail";
 import { FormattedNumber } from "react-intl";
+import { FavoriteButton } from "../../shared/components/FavoriteButton";
+import { useLocalNotes } from "../../context/LocalNoteProvider";
+import { AuditorButton } from "../Providers/AuditorButton";
+import { Link } from "react-router-dom";
+import { UrlService } from "../../shared/utils/urlUtils";
 
 const yaml = require("js-yaml");
 
@@ -68,7 +71,7 @@ const useStyles = makeStyles((theme) => ({
   },
   tooltipIcon: {
     fontSize: "1rem",
-    color: theme.palette.grey[600]
+    color: theme.palette.grey[500]
   },
   whiteLink: {
     fontWeight: "bold",
@@ -82,17 +85,23 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: ".875rem",
     fontSize: ".5rem",
     fontWeight: "bold"
+  },
+  activeLeaseIcon: {
+    fontSize: "1rem",
+    display: "flex",
+    color: theme.palette.success.dark
   }
 }));
 
-export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManifest, dseq }, ref) => {
+export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManifest, dseq, providers, loadDeploymentDetail }, ref) => {
   const { enqueueSnackbar } = useSnackbar();
-  const { data: providers } = useProviders();
   const providerInfo = providers?.find((p) => p.owner === lease?.provider);
   const { localCert } = useCertificate();
   const isLeaseActive = lease.state === "active";
   const [isServicesAvailable, setIsServicesAvailable] = useState(false);
+  const { favoriteProviders, updateFavoriteProviders } = useLocalNotes();
   const [isViewingProviderDetail, setIsViewingProviderDetail] = useState(false);
+  const isFavorite = favoriteProviders.some((x) => lease?.provider === x);
   const {
     data: leaseStatus,
     error,
@@ -118,6 +127,7 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
   const isLeaseNotFound = error && error.includes && error.includes("lease not found") && isLeaseActive;
   const servicesNames = leaseStatus ? Object.keys(leaseStatus.services) : [];
   const classes = useStyles();
+  const theme = useTheme();
   const [isSendingManifest, setIsSendingManifest] = useState(false);
 
   React.useImperativeHandle(ref, () => ({
@@ -151,7 +161,7 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
   function handleExternalUrlClick(ev, externalUrl) {
     ev.preventDefault();
 
-    window.electron.openUrl("http://" + externalUrl);
+    window.open("http://" + externalUrl);
   }
 
   function handleEditManifestClick(ev) {
@@ -168,21 +178,34 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
       await sendManifestToProvider(providerInfo, manifest, dseq, localCert);
 
       enqueueSnackbar(<Snackbar title="Manifest sent!" iconVariant="success" />, { variant: "success", autoHideDuration: 10_000 });
+
+      loadDeploymentDetail();
     } catch (err) {
       enqueueSnackbar(<ManifestErrorSnackbar err={err} iconVariant="error" />, { variant: "error", autoHideDuration: null });
     }
     setIsSendingManifest(false);
   }
 
+  const onStarClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const newFavorites = isFavorite ? favoriteProviders.filter((x) => x !== lease.provider) : favoriteProviders.concat([lease.provider]);
+
+    updateFavoriteProviders(newFavorites);
+  };
+
   return (
     <>
-      {isViewingProviderDetail && <ProviderDetail provider={providerStatus} onClose={() => setIsViewingProviderDetail(false)} address={lease.provider} />}
+      {isViewingProviderDetail && (
+        <ProviderDetailModal provider={{ ...providerStatus, ...providerInfo }} onClose={() => setIsViewingProviderDetail(false)} address={lease.provider} />
+      )}
 
       <Card className={classes.root} elevation={4}>
         <CardHeader
           classes={{ title: classes.cardHeaderTitle, root: classes.cardHeader }}
           title={
-            <Box display="flex">
+            <Box display="flex" alignItems="center">
               <LabelValue
                 label="Status:"
                 value={
@@ -212,6 +235,7 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
                   memoryAmount={lease.memoryAmount}
                   storageAmount={lease.storageAmount}
                   color={isLeaseActive ? "primary" : "default"}
+                  size="medium"
                 />
               </Box>
               <LabelValue
@@ -220,7 +244,7 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
                   <>
                     <PricePerMonth perBlockValue={uaktToAKT(lease.price.amount, 6)} />
                     <PriceEstimateTooltip value={uaktToAKT(lease.price.amount, 6)} />
-                    <Box component="span" marginLeft=".5rem">
+                    <Box component="span" marginLeft=".5rem" fontSize=".75rem">
                       <FormattedNumber value={lease.price.amount} maximumSignificantDigits={18} />
                       uakt ({`~${getAvgCostPerMonth(lease.price.amount)}akt/month`})
                     </Box>
@@ -236,26 +260,30 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
                       {isLoadingProviderStatus && <CircularProgress size="1rem" />}
                       {providerStatus && (
                         <>
-                          {providerStatus.name}
+                          <Link to={UrlService.providerDetail(lease.provider)}>{providerStatus.name}</Link>
 
-                          <Box marginLeft={1}>
-                            <LinkTo onClick={() => setIsViewingProviderDetail(true)}>View details</LinkTo>
+                          <Box display="flex" alignItems="center" marginLeft={1}>
+                            <FavoriteButton isFavorite={isFavorite} onClick={onStarClick} />
+
+                            {providerInfo.isAudited && (
+                              <Box marginLeft=".5rem">
+                                <AuditorButton provider={providerInfo} />
+                              </Box>
+                            )}
+
+                            <Box marginLeft=".5rem" display="flex">
+                              <LinkTo onClick={() => setIsViewingProviderDetail(true)}>View details</LinkTo>
+                            </Box>
                           </Box>
                         </>
                       )}
                     </>
                   }
-                  marginTop="5px"
-                  marginBottom=".5rem"
+                  marginTop=".25rem"
+                  marginBottom="1rem"
                 />
               )}
             </Box>
-
-            {providerInfo && (
-              <Box paddingLeft="1rem" flexGrow={1}>
-                <ProviderAttributes provider={providerInfo} />
-              </Box>
-            )}
           </Box>
 
           {isLeaseNotFound && (
@@ -283,7 +311,12 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
             servicesNames
               .map((n) => leaseStatus.services[n])
               .map((service, i) => (
-                <Box mb={1} key={`${service.name}_${i}`}>
+                <Box
+                  pb={servicesNames.length === i + 1 ? 0 : 2}
+                  mb={servicesNames.length === i + 1 ? 0 : 2}
+                  borderBottom={servicesNames.length === i + 1 ? 0 : `1px solid ${theme.palette.grey[300]}`}
+                  key={`${service.name}_${i}`}
+                >
                   <Box display="flex" alignItems="center">
                     <LabelValue label="Group:" value={service.name} fontSize="1rem" />
                     {isLoadingLeaseStatus || !isServicesAvailable ? (
@@ -311,75 +344,90 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
                         </Tooltip>
                       </Box>
                     )}
+
+                    {isServicesAvailable && (
+                      <Box marginLeft=".5rem">
+                        <CheckIcon className={classes.activeLeaseIcon} />
+                      </Box>
+                    )}
                   </Box>
 
-                  <Box display="flex" alignItems="center" marginTop="2px">
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    mb={service.uris?.length > 0 || (leaseStatus.forwarded_ports && leaseStatus.forwarded_ports[service.name]?.length > 0) ? "1rem" : 0}
+                  >
                     <Box display="flex" alignItems="center">
                       <Typography variant="caption">Available:&nbsp;</Typography>
-                      <Chip label={service.available} size="small" color={service.available > 0 ? "primary" : "default"} className={classes.serviceChip} />
+                      <Chip label={service.available} size="small" color="default" className={classes.serviceChip} />
                     </Box>
                     <Box display="flex" alignItems="center">
                       <Typography variant="caption" className={classes.marginLeft}>
                         Ready Replicas:&nbsp;
                       </Typography>
-                      <Chip
-                        label={service.ready_replicas}
-                        size="small"
-                        color={service.ready_replicas > 0 ? "primary" : "default"}
-                        className={classes.serviceChip}
-                      />
+                      <Chip label={service.ready_replicas} size="small" color="default" className={classes.serviceChip} />
                     </Box>
                     <Box display="flex" alignItems="center">
                       <Typography variant="caption" className={classes.marginLeft}>
                         Total:&nbsp;
                       </Typography>
-                      <Chip label={service.total} size="small" color="primary" className={classes.serviceChip} />
+                      <Chip label={service.total} size="small" color="default" className={classes.serviceChip} />
                     </Box>
                   </Box>
 
                   {leaseStatus.forwarded_ports && leaseStatus.forwarded_ports[service.name]?.length > 0 && (
-                    <>
-                      Forwarded Ports:{" "}
-                      {leaseStatus.forwarded_ports[service.name].map((p) => (
-                        <Box key={"port_" + p.externalPort} display="inline" mr={0.5}>
-                          <LinkTo label={``} disabled={p.available < 1} onClick={(ev) => handleExternalUrlClick(ev, `${p.host}:${p.externalPort}`)}>
-                            {p.externalPort}:{p.port}
-                          </LinkTo>
-                        </Box>
-                      ))}
-                    </>
+                    <Box marginTop=".5rem" mb={service.uris?.length > 0 ? "1rem" : 0}>
+                      <LabelValue
+                        label="Forwarded Ports:"
+                        value={leaseStatus.forwarded_ports[service.name].map((p) => (
+                          <Box key={"port_" + p.externalPort} display="inline" mr={0.5}>
+                            {p.host ? (
+                              <LinkTo label={``} disabled={p.available < 1} onClick={(ev) => handleExternalUrlClick(ev, `${p.host}:${p.externalPort}`)}>
+                                {p.port}:{p.externalPort}
+                              </LinkTo>
+                            ) : (
+                              <>
+                                <Chip label={`${p.port}:${p.externalPort}`} size="small" />
+                              </>
+                            )}
+                          </Box>
+                        ))}
+                      />
+                    </Box>
                   )}
+
                   {service.uris?.length > 0 && (
                     <>
                       <Box marginTop=".5rem">
-                        <LabelValue label="Uris:" />
+                        <LabelValue label="URI(s):" />
                         <List dense>
                           {service.uris.map((uri) => {
                             return (
-                              <ListItem key={uri} className={classes.listItem}>
+                              <ListItem key={uri} dense>
                                 <ListItemText
                                   primary={
-                                    <LinkTo className={classes.link} onClick={(ev) => handleExternalUrlClick(ev, uri)}>
-                                      {uri} <LaunchIcon fontSize="small" />
-                                    </LinkTo>
+                                    <Box display="flex" alignItems="center">
+                                      <LinkTo className={classes.link} onClick={(ev) => handleExternalUrlClick(ev, uri)}>
+                                        {uri} <LaunchIcon fontSize="small" />
+                                      </LinkTo>
+                                      &nbsp;&nbsp;
+                                      <IconButton
+                                        edge="end"
+                                        aria-label="uri"
+                                        size="small"
+                                        onClick={(ev) => {
+                                          copyTextToClipboard(uri);
+                                          enqueueSnackbar(<Snackbar title="Uri copied to clipboard!" iconVariant="success" />, {
+                                            variant: "success",
+                                            autoHideDuration: 2000
+                                          });
+                                        }}
+                                      >
+                                        <FileCopyIcon fontSize="small" />
+                                      </IconButton>
+                                    </Box>
                                   }
                                 />
-                                <ListItemSecondaryAction>
-                                  <IconButton
-                                    edge="end"
-                                    aria-label="uri"
-                                    size="small"
-                                    onClick={(ev) => {
-                                      copyTextToClipboard(uri);
-                                      enqueueSnackbar(<Snackbar title="Uri copied to clipboard!" iconVariant="success" />, {
-                                        variant: "success",
-                                        autoHideDuration: 2000
-                                      });
-                                    }}
-                                  >
-                                    <FileCopyIcon fontSize="small" />
-                                  </IconButton>
-                                </ListItemSecondaryAction>
                               </ListItem>
                             );
                           })}
@@ -389,6 +437,61 @@ export const LeaseRow = React.forwardRef(({ lease, setActiveTab, deploymentManif
                   )}
                 </Box>
               ))}
+
+          {isLeaseActive && leaseStatus && leaseStatus.ips && (
+            <Box marginTop=".5rem">
+              <LabelValue label="IP(s):" />
+              <List dense>
+                {servicesNames
+                  .map((n) => leaseStatus.ips[n])
+                  .map((ips, i) => {
+                    return ips?.map((ip, ii) => (
+                      <ListItem key={`${ip.IP}${ip.ExternalPort}`}>
+                        <ListItemText
+                          primary={
+                            <Box display="flex" alignItems="center">
+                              <LinkTo className={classes.link} onClick={(ev) => handleExternalUrlClick(ev, ip.IP)}>
+                                {ip.IP}:{ip.ExternalPort} <LaunchIcon fontSize="small" />
+                              </LinkTo>
+                              &nbsp;&nbsp;
+                              <Tooltip
+                                classes={{ tooltip: classes.tooltip }}
+                                arrow
+                                interactive
+                                title={
+                                  <>
+                                    <div>IP:&nbsp;{ip.IP}</div>
+                                    <div>External Port:&nbsp;{ip.ExternalPort}</div>
+                                    <div>Port:&nbsp;{ip.Port}</div>
+                                    <div>Protocol:&nbsp;{ip.Protocol}</div>
+                                  </>
+                                }
+                              >
+                                <InfoIcon className={classes.tooltipIcon} fontSize="small" />
+                              </Tooltip>
+                              &nbsp;&nbsp;
+                              <IconButton
+                                edge="end"
+                                size="small"
+                                onClick={(ev) => {
+                                  copyTextToClipboard(ip.IP);
+                                  enqueueSnackbar(<Snackbar title="Ip copied to clipboard!" iconVariant="success" />, {
+                                    variant: "success",
+                                    autoHideDuration: 2000
+                                  });
+                                }}
+                              >
+                                <FileCopyIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ));
+                  })}
+              </List>
+            </Box>
+          )}
         </CardContent>
       </Card>
     </>
