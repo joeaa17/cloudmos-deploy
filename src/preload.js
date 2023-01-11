@@ -1,13 +1,8 @@
-// const { ipcRenderer, shell, contextBridge } = require("electron");
-// import providerProxy from "./providerProxy";
+import {spawnProxy, ProviderProxy, OpenWebSocket} from "./providerProxy";
 import path from "path";
-// import fs from "fs.promises";
 import helpers from "./helpers";
 
-const cp = require('child_process');
-
 const { executeKdf } = require("@cosmjs/proto-signing");
-
 
 const appVersion = "1.0.0";//window.process.argv[window.process.argv.length - 2];
 const appEnvironment = "development";//window.process.argv[window.process.argv.length - 1];
@@ -24,24 +19,17 @@ const defaultSaveDialogOptions = {
 let logsWorker;
 let downloadWorker;
 
-// All of the Node.js APIs are available in the preload process.
-// It has the same sandbox as a Chrome extension.
-// window.addEventListener("DOMContentLoaded", () => {
-//   const replaceText = (selector, text) => {
-//     const element = document.getElementById(selector);
-//     if (element) element.innerText = text;
-//   };
+const fork = (path, args, options) => {
+  const worker = new Worker(path);
+  worker.postMessage({ args, options });
+  return worker;
+}
 
-//   for (const type of ["chrome", "node", "electron"]) {
-//     replaceText(`${type}-version`, process.versions[type]);
-//   }
-// });
-
-// contextBridge.exposeInMainWorld("electron", {
+spawnProxy();
 
 window.electron = {
-  queryProvider: (url, method, body, certPem, prvPem) => "",//providerProxy.queryProvider(url, method, body, certPem, prvPem),
-  openWebSocket: (url, certPem, prvPem, onMessage) => "",//providerProxy.openWebSocket(url, certPem, prvPem, onMessage),
+  queryProvider: (url, method, body, certPem, prvPem) => {/*spawnProxy();*/ return ProviderProxy(url, method, body, certPem, prvPem)},
+  openWebSocket: async (url, certPem, prvPem, onMessage) => { return OpenWebSocket(url, certPem, prvPem, onMessage)},
   openUrl: (url) => {
     // console.log("Opening in browser: " + url);
     window.open(url);
@@ -71,7 +59,7 @@ window.electron = {
   downloadLogs: async (appPath, url, certPem, prvPem, fileName) => {
     return new Promise((res, rej) => {
 
-      logsWorker = cp.fork(path.join(__dirname, "/workers/log.worker.js"), ["args"], {
+      logsWorker = fork(path.join(__dirname, "/workers/log.worker.js"), ["args"], {
         stdio: ["pipe", "pipe", "pipe", "ipc"]
       });
 
@@ -128,7 +116,7 @@ window.electron = {
   downloadFile: async (appPath, url, certPem, prvPem, fileName) => {
     return new Promise((res, rej) => {
 
-      downloadWorker = cp.fork(path.join(__dirname, "/workers/download.worker.js"), ["args"], {
+      downloadWorker = fork(path.join(__dirname, "/workers/download.worker.js"), ["args"], {
         stdio: ["pipe", "pipe", "pipe", "ipc"]
       });
 

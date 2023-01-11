@@ -1,28 +1,42 @@
 import path from "path";
-import { nanoid } from "nanoid";
+// import { nanoid } from "nanoid";
+const { nanoid } = require("nanoid");
 
-// import "./child_process.js";
 
-import child_process from "./child_process.js";
-// var {spawn} = require.resolve("child-process-ext");
+const spawn = (command, args, options) => {
+  
+  
+// as the code is too complex and we don't need all the features
+  // of child_process.spawn
 
+  const { env, stdio } = options;
+
+  const worker = new Worker(command, {
+    type: "module",
+    env,
+    stdio
+  });
+
+
+  return worker;
+}
 
 let child = null;
-function spawnProxy() {
+async function spawnProxy() {
 
   const dir = __dirname.replace("asar", "asar.unpacked");
   const command = path.join(dir, getProxyFilePath());
 
   const parameters = [];
 
-  child = child_process.spawn(command, parameters, {
+  child = spawn(command, parameters, {
     env: {},
     stdio: ["pipe", "pipe", "pipe", "ipc"]
   });
 
   child.stdout.on("data", function (data) {});
 
-  child.e.on("message", (response) => {
+  child.on("message", (response) => {
     if (response.type === "fetch") {
       if (response.error) {
         pendingRequests[response.id].rej(response.error);
@@ -36,19 +50,19 @@ function spawnProxy() {
     }
   });
 
-  child.e.on("close", (code, signal) => {
+  child.on("close", (code, signal) => {
     console.error("Proxy was closed with code: " + code);
   });
 
-  child.e.on("error", (err) => {
+  child.on("error", (err) => {
     console.error(err);
   });
 
-  child.e.on("exit", (code, signal) => {
+  child.on("exit", (code, signal) => {
     console.error("Proxy exited with code: " + code);
   });
 }
-spawnProxy();
+// spawnProxy();
 
 let pendingRequests = [];
 let openSockets = [];
@@ -130,7 +144,7 @@ const ProviderProxy = async function (url, method, body, certPem, prvPem) {
 };
 
 function getProxyFilePath() {
-  switch (""){ //(process.platform) {
+  switch (process.platform) {
     case "win32":
       return "./tools/cloudmos-provider-proxy.exe";
     case "linux":
@@ -143,8 +157,8 @@ function getProxyFilePath() {
   }
 }
 
+// export default providerProxy;
 
 export { ProviderProxy };
 export { OpenWebSocket };
 export { spawnProxy };
-
