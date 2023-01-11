@@ -17,7 +17,7 @@
    {
       "id":"c29r3.xyz",
       "api":"https://akash.c29r3.xyz:443/api",
-      "rpc":"http://akash.c29r3.xyz:80/rpc"
+      "rpc":"https://akash.c29r3.xyz:80/rpc"
    },
    {
       "id":"forbole.com",
